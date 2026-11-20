@@ -31,12 +31,17 @@ function cleanClone(src) {
   src.traverse((o) => {
     if (!o.isMesh || !o.visible || skip.has(o)) return;
     const mats = Array.isArray(o.material) ? o.material.map(plainMaterial) : plainMaterial(o.material);
+    // optional per-instance vertex colouring hook (shader-driven looks baked to COLOR_0)
+    const colorize = o.userData.exportColorize;
+    if (colorize && !Array.isArray(mats)) { mats.vertexColors = true; mats.color.set(0xffffff); }
     if (o.isInstancedMesh) {
       const parts = [];
       for (let i = 0; i < o.count; i++) {
         const m = new THREE.Matrix4();
         o.getMatrixAt(i, m);
-        parts.push(o.geometry.clone().applyMatrix4(m.premultiply(o.matrixWorld)));
+        const g = o.geometry.clone();
+        if (colorize) colorize(g, i);
+        parts.push(g.applyMatrix4(m.premultiply(o.matrixWorld)));
       }
       if (!parts.length) return;
       const g = mergeGeometries(parts.map(stripCustom), false);
@@ -98,6 +103,9 @@ export async function exportArea(world) {
     const obj = root.getObjectByName(name);
     if (obj) files[`${name.toLowerCase()}.glb`] = enc(await toGLB(cleanClone(obj)));
   }
+  // fairy circles: static rings only (mushrooms, flowers, stones); the VFX are flagged noExport
+  const fairy = root.getObjectByName('FairyCircles');
+  if (fairy) files['fairy_circles.glb'] = enc(await toGLB(cleanClone(fairy)));
   const terrain = cleanClone(root.getObjectByName('Terrain'));
   bakeTerrainColors(terrain.children[0].geometry);
   terrain.children[0].material.vertexColors = true;

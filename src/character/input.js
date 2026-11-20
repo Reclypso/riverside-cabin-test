@@ -5,8 +5,21 @@ const KEYS = {
   ShiftLeft: 'run', ShiftRight: 'run', Space: 'jump',
 };
 
-export function createKeyboard(target = window) {
+export function createKeyboard(target = window, dom = null) {
   const down = new Set();
+  let attackQueued = false;
+  // axe: F key, or a left click on the canvas (press + release without dragging, so a mouse-drag
+  // still orbits the follow camera)
+  target.addEventListener('keydown', (e) => { if (e.code === 'KeyF' && !e.repeat) attackQueued = true; });
+  if (dom) {
+    let px = 0, py = 0, pt = 0, armed = false;
+    dom.addEventListener('pointerdown', (e) => { if (e.button === 0) { px = e.clientX; py = e.clientY; pt = performance.now(); armed = true; } });
+    dom.addEventListener('pointerup', (e) => {
+      if (e.button !== 0 || !armed) return;
+      armed = false;
+      if (Math.hypot(e.clientX - px, e.clientY - py) < 7 && performance.now() - pt < 350) attackQueued = true;
+    });
+  }
   const onDown = (e) => {
     const k = KEYS[e.code];
     if (!k) return;
@@ -25,6 +38,7 @@ export function createKeyboard(target = window) {
         x: (down.has('r') ? 1 : 0) - (down.has('l') ? 1 : 0),
         y: (down.has('f') ? 1 : 0) - (down.has('b') ? 1 : 0),
         run: down.has('run'), jump: down.has('jump'),
+        attack: (() => { const a = attackQueued; attackQueued = false; return a; })(),
       };
     },
     anyMove: () => down.has('f') || down.has('b') || down.has('l') || down.has('r'),

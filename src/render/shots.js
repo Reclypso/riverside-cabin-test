@@ -12,6 +12,14 @@ export const SHOTS = {
   char_close: { pos: [-10.84, 3.39, 7.44], target: [-9.0, 3.2, 5.6], fov: 26, tod: 'day', char: [-9.0, 5.6, -1.397], dof: [2.6, 1.4, 1.6], label: 'Woodsman' },
   char_golden: { pos: [-11.2, 3.36, 4.95], target: [-9.0, 3.22, 5.6], fov: 26, tod: 'golden', char: [-9.0, 5.6, -1.62], dof: [2.3, 1.3, 1.8], label: 'Woodsman (golden)' },
   char_world: { pos: [-5.4, 4.1, 17.5], target: [-5.75, 2.6, 8.8], fov: 46, tod: 'day', char: [-5.6, 12.0, -3.105], label: 'Woodsman in world' },
+  // v3: hair turnaround (woodsman facing the day sun so the face is lit)
+  hair_front: { pos: [-9.861, 3.49, 5.198], target: [-9.0, 3.45, 5.6], fov: 28, tod: 'day', char: [-9.0, 5.6, -2.008], label: 'Hair: front' },
+  hair_34: { pos: [-9.918, 3.49, 5.845], target: [-9.0, 3.45, 5.6], fov: 28, tod: 'day', char: [-9.0, 5.6, -2.008], label: 'Hair: 3/4' },
+  hair_side: { pos: [-9.402, 3.49, 6.461], target: [-9.0, 3.45, 5.6], fov: 28, tod: 'day', char: [-9.0, 5.6, -2.008], label: 'Hair: side' },
+  hair_back: { pos: [-8.273, 3.49, 6.211], target: [-9.0, 3.45, 5.6], fov: 28, tod: 'day', char: [-9.0, 5.6, -2.008], label: 'Hair: back' },
+  // v3: fairy circles (meadow circle by day, river-bank circle in the cabin's golden-hour shade)
+  fairy: { pos: [-17.6, 2.75, 25.6], target: [-14.3, 1.45, 21.2], fov: 40, tod: 'day', char: null, label: 'Fairy circle' },
+  fairy_golden: { pos: [8.9, 3.3, 5.2], target: [4.9, 1.2, 0.6], fov: 42, tod: 'golden', char: null, label: 'Fairy circle (golden)' },
 };
 
 // Slow cinematic orbit for the video: arc around the idle target with gentle ease.

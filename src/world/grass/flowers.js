@@ -7,6 +7,7 @@ import { groundY, pathDist } from '../heightfield.js';
 import { CABIN } from '../layout.js';
 import { makeRng } from '../../util/rng.js';
 import { noise } from '../../util/noise.js';
+import { inFairyCircle } from '../fairy/layout.js';
 import { stylize } from '../../render/stylize.js';
 
 function flowerGeometry(petals = 7) {
@@ -62,7 +63,7 @@ export async function createFlowers() {
   for (let i = 0; i < 90000 && mats.length < 9000; i++) {
     const x = rng.range(-60, 55), z = rng.range(-60, 55);
     const k = grassHeightAt(x, z);
-    if (k <= 0) continue;
+    if (k <= 0 || inFairyCircle(x, z, 0.6)) continue;
     // patches: meadow noise + extra near the cabin and along path edges
     const meadow = noise.fbm2(x * 0.045 + 9, z * 0.045 - 3, 3) * 0.5 + 0.5;
     const nearCabin = Math.exp(-((x - CABIN.x) ** 2 + (z - CABIN.z - 4) ** 2) / 120);

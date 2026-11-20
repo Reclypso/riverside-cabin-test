@@ -23,10 +23,35 @@ export function createLocomotion(root, clips) {
   for (const g of gaits) g.action.timeScale = 0; // we drive their time from the shared phase
   let phase = 0, moveW = 0, airW = 0;
   idle.setEffectiveWeight(1);
+  // one-shot overlay (axe chop, hit react, death): weighted over the whole locomotion blend.
+  // Its time is driven here (not by the mixer) so hit-stop can freeze it exactly.
+  let os = null;
+  const oneShots = {};
+  const oneShot = (name) => {
+    if (!oneShots[name] && clips[name]) {
+      const a = mixer.clipAction(clips[name]);
+      a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.timeScale = 0; a.enabled = true;
+      a.play(); a.setEffectiveWeight(0);
+      oneShots[name] = a;
+    }
+    return oneShots[name];
+  };
 
   return {
     mixer,
     gaitPhase: () => phase,
+    /** play a clip once over the locomotion; hold = stay on the last frame until stopOneShot() */
+    playOneShot(name, { timeScale = 1, fadeIn = 0.07, fadeOut = 0.18, hold = false, start = 0 } = {}) {
+      const a = oneShot(name);
+      if (!a) return null;
+      if (os && os.action !== a) os.action.setEffectiveWeight(0);
+      os = { name, action: a, t: start * a.getClip().duration, dur: a.getClip().duration, timeScale, fadeIn, fadeOut, hold, w: os?.w ?? 0 };
+      return os;
+    },
+    stopOneShot() { if (os) os.release = true; },
+    get oneShot() { return os; },
+    /** normalised progress 0..1 of the current one-shot (or -1) */
+    oneShotProgress: () => (os ? Math.min(1, os.t / os.dur) : -1),
     // absTime (capture mode, idle only): pose idle/air from absolute world time so a given frame
     // index always renders the same pose
     update(dt, speed, airborne, absTime) {
@@ -49,8 +74,26 @@ export function createLocomotion(root, clips) {
         g.action.setEffectiveWeight(w * moveW * ground);
         g.action.time = ((phase + g.offset) % 1) * g.dur;
       });
-      idle.setEffectiveWeight((1 - moveW) * ground);
-      air.setEffectiveWeight(airW);
+      // one-shot weight envelope; the base layers fill the rest
+      let wOS = 0;
+      if (os) {
+        os.t += dt * os.timeScale;
+        const end = os.t >= os.dur;
+        let target = 1;
+        if (os.release || (end && !os.hold)) target = 0;
+        else if (!os.hold && os.dur - os.t < os.fadeOut) target = Math.max(0, (os.dur - os.t) / os.fadeOut);
+        const k = target > os.w ? (os.fadeIn > 0 ? dt / os.fadeIn : 1) : dt / Math.max(0.05, os.fadeOut);
+        os.w += THREE.MathUtils.clamp(target - os.w, -k, k);
+        os.action.time = Math.min(os.t, os.dur - 1e-4);
+        os.action.setEffectiveWeight(os.w);
+        wOS = os.w;
+        if ((end || os.release) && os.w <= 0.001 && !os.hold) { os.action.setEffectiveWeight(0); os = null; }
+        else if (os.release && os.w <= 0.001) { os.action.setEffectiveWeight(0); os = null; }
+      }
+      const base = 1 - wOS;
+      gaits.forEach((g) => g.action.setEffectiveWeight(g.action.getEffectiveWeight() * base));
+      idle.setEffectiveWeight((1 - moveW) * ground * base);
+      air.setEffectiveWeight(airW * base);
       if (absTime !== undefined) {
         idle.time = absTime % idle.getClip().duration; air.time = absTime % air.getClip().duration;
         mixer.update(0);

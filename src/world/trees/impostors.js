@@ -32,8 +32,8 @@ export function createImpostorAtlas(renderer, variants) {
     sun.color.set(preset.sunColor); sun.intensity = preset.sunIntensity * 0.95;
     hemi.color.set(preset.hemiSky); hemi.groundColor.set(preset.hemiGround); hemi.intensity = preset.hemiIntensity;
     const prevTarget = renderer.getRenderTarget(), prevClear = renderer.getClearColor(new THREE.Color()), prevAlpha = renderer.getClearAlpha();
-    const saved = [G.uTime.value, G.uWind.value.z, G.uAOParams.value.z, G.uCloudShadow.value];
-    G.uTime.value = 0; G.uWind.value.z = 0; G.uAOParams.value.z = 0; G.uCloudShadow.value = 0; // neutral bake
+    const saved = [G.uTime.value, G.uWind.value.z, G.uAOParams.value.z, G.uCloudShadow.value, G.uFocusOn.value];
+    G.uTime.value = 0; G.uWind.value.z = 0; G.uAOParams.value.z = 0; G.uCloudShadow.value = 0; G.uFocusOn.value = 0; // neutral bake
     renderer.setRenderTarget(target);
     renderer.setClearColor(0x000000, 0); renderer.clear();
     for (const c of cells) {
@@ -55,7 +55,7 @@ export function createImpostorAtlas(renderer, variants) {
     target.scissorTest = false;
     renderer.setRenderTarget(prevTarget);
     renderer.setClearColor(prevClear, prevAlpha);
-    [G.uTime.value, G.uWind.value.z, G.uAOParams.value.z, G.uCloudShadow.value] = saved;
+    [G.uTime.value, G.uWind.value.z, G.uAOParams.value.z, G.uCloudShadow.value, G.uFocusOn.value] = saved;
   }
   return { texture: target.texture, cells, cols, rows, bake };
 }

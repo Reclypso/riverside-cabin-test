@@ -49,6 +49,16 @@ export function leafMaterial(map, color) {
     fragmentPars: 'varying float vLeafOuter;',
     normalHook: 'normal = normalize(vNormal);',
     postLight: LEAF_POST,
+    // leaves within ~2.8 m of the camera dissolve (screen-door dither), so the follow camera
+    // pushed into a canopy sees through it instead of a wall of leaf cards; shadows unaffected
+    // ...and while playing, leaves inside a ~1.6 m tunnel between the lens and the woodsman too
+    albedo: /* glsl */ `
+      { float camFade = smoothstep(1.0, 2.8, distance(vStyWorld, cameraPosition));
+        vec3 seg = uFocus - cameraPosition;
+        float tt = clamp(dot(vStyWorld - cameraPosition, seg) / max(dot(seg, seg), 1e-4), 0.0, 1.0);
+        float dSeg = distance(vStyWorld, cameraPosition + seg * tt);
+        float tunnel = mix(1.0, smoothstep(0.9, 2.1, dSeg), uFocusOn * step(tt, 0.96));
+        if (hash12(floor(gl_FragCoord.xy)) > min(camFade, tunnel)) discard; }`,
   });
   m.userData.depth = stylizedDepth({ map, alphaTest: 0.42, vertexPars: WIND_PARS, worldVertex: WIND(true) });
   return m;

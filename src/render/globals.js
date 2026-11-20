@@ -15,6 +15,8 @@ export const G = {
   uInteriorInv: { value: new THREE.Matrix4().makeTranslation(0, -1e5, 0) },
   uInteriorHalf: { value: new THREE.Vector3(0, 0, 0) },
   uInteriorAmbient: { value: 0.28 }, // fraction of sky fill that survives inside
+  uFocus: { value: new THREE.Vector3() }, // player chest (follow camera target): foliage see-through tunnel
+  uFocusOn: { value: 0 },
   // screen-space AO (render/ao.js): x,y = 1/resolution, z = strength (0 in side passes)
   uAOTex: { value: null }, uAODepth: { value: null },
   uAOParams: { value: new THREE.Vector3(1, 1, 0) }, uAOProj: { value: new THREE.Vector2(0.3, 4000) },
@@ -31,6 +33,8 @@ uniform vec3 uLitTint;
 uniform mat4 uInteriorInv;
 uniform vec3 uInteriorHalf;
 uniform float uInteriorAmbient;
+uniform vec3 uFocus;
+uniform float uFocusOn;
 uniform sampler2D uAOTex;
 uniform sampler2D uAODepth;
 uniform vec3 uAOParams;

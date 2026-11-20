@@ -6,6 +6,7 @@ import { createGrassMaterial } from './grassMaterial.js';
 import { groundY, pathDist, riverAt, riverHalfWidth } from '../heightfield.js';
 import { inCabinFootprint, DOCK, WOODPILE, CHOPPING, RIVER_ROCKS, SAWHORSE, YARD_PROPS } from '../layout.js';
 import { makeRng } from '../../util/rng.js';
+import { fairyGrassFactor } from '../fairy/layout.js';
 import { noise, smoothstep } from '../../util/noise.js';
 
 const TILE = 10;
@@ -25,10 +26,13 @@ export function grassHeightAt(x, z) {
   if (Math.hypot(x - SAWHORSE.x, z - SAWHORSE.z) < 1.0 || Math.hypot(x - YARD_PROPS.x, z - YARD_PROPS.z) < 1.2) return 0;
   if (Math.hypot(x - DOCK.x, z - DOCK.z) < 1.4) return 0;
   for (const r of RIVER_ROCKS) if (Math.hypot(x - r.x, z - r.z) < r.r) return 0;
+  const fk = fairyGrassFactor(x, z); // fairy rings: clear mushroom band, short lawn inside
+  if (fk <= 0) return 0;
   let k = 0.65 + 0.75 * (noise.fbm2(x * 0.07 + 40, z * 0.07, 3) * 0.5 + 0.5);
   k *= 0.45 + 0.55 * smoothstep(0.05, 1.6, pd); // trimmed along path edges
   k *= 0.4 + 0.6 * smoothstep(0.12, 0.55, h); // short on the wet bank
   if (inCabinFootprint(x, z, 1.2)) k *= 0.55;
+  k *= fk;
   const [rd, s] = riverAt(x, z);
   const hw = riverHalfWidth(s);
   k *= 1 + 0.35 * (1 - smoothstep(hw + 0.5, hw + 4, rd)) * smoothstep(0.15, 0.5, h); // lush bank tufts

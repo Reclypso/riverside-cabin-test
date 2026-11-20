@@ -16,6 +16,7 @@ export function createController(collision, cabin) {
     door: 0, moving: false, dir: new THREE.Vector2(0, 1),
   };
   const local = new THREE.Vector3(), inv = new THREE.Matrix4();
+  const push = new THREE.Vector2();
   const doorWorld = cabin?.userData.doorWorld;
 
   function insideCabin(p) {
@@ -35,8 +36,8 @@ export function createController(collision, cabin) {
     const sd = dx * doorN.x + dz * doorN.z;            // signed distance from the wall plane (+ outside)
     const lat = dx * doorN.z - dz * doorN.x;           // offset along the wall from the door axis
     const toward = -(wx * doorN.x + wz * doorN.z) * Math.sign(sd || 1); // >0 when heading at the wall
-    if (Math.abs(sd) > 2.2 || Math.abs(lat) > 1.35 || Math.abs(lat) < 0.08 || toward < 0.35) return;
-    const k = 2.2 * THREE.MathUtils.smoothstep(2.2 - Math.abs(sd), 0, 1.6) * Math.min(1, Math.abs(lat) / 0.3);
+    if (Math.abs(sd) > 1.8 || Math.abs(lat) > 0.95 || Math.abs(lat) < 0.06 || toward < 0.8) return;
+    const k = 1.15 * THREE.MathUtils.smoothstep(1.8 - Math.abs(sd), 0, 1.2) * Math.min(1, Math.abs(lat) / 0.3) * (toward - 0.8) / 0.2;
     const tx = doorN.z, tz = -doorN.x, sg = -Math.sign(lat);
     wx += tx * sg * k; wz += tz * sg * k;
     const l = Math.hypot(wx, wz); wx /= l; wz /= l;
@@ -46,18 +47,23 @@ export function createController(collision, cabin) {
     state: s,
     place(x, z, heading = 0) {
       s.pos.set(x, collision.floorAt(x, z).y, z); s.heading = heading; s.speed = 0; s.vy = 0; s.grounded = true;
+      push.set(0, 0);
     },
+    /** knockback impulse (m/s, world XZ), slides through the collision world */
+    push(vx, vz) { push.set(vx, vz); },
     update(dt, input, camYaw, playing = true) {
       // camera-relative wish direction
       const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw);
       wx = fx * input.y + -fz * input.x; wz = fz * input.y + fx * input.x;
       const len = Math.hypot(wx, wz);
-      const want = len > 0.01 ? (input.run ? RUN : WALK) * Math.min(1, len) : 0; // analog-friendly
+      // moveScale < 1 while swinging the axe / stunned; face = heading override (attack aim assist)
+      const want = len > 0.01 ? (input.run ? RUN : WALK) * Math.min(1, len) * (input.moveScale ?? 1) : 0;
       if (len > 0.01) { wx /= len; wz /= len; doorAssist(); s.dir.set(wx, wz); }
       s.speed = damp(s.speed, want, want > s.speed ? 5.5 : 9, dt);
       if (s.speed < 0.02 && want === 0) s.speed = 0;
       s.moving = s.speed > 0.05;
-      if (len > 0.01) s.heading = dampAngle(s.heading, Math.atan2(wx, wz), 11, dt);
+      if (input.face !== undefined) s.heading = dampAngle(s.heading, input.face, 16, dt);
+      else if (len > 0.01 && (input.moveScale ?? 1) > 0.05) s.heading = dampAngle(s.heading, Math.atan2(wx, wz), 11, dt);
       // move along the wish direction (responsive), but no faster than the facing allows in tight turns
       const facingDot = Math.max(0.35, Math.cos(Math.atan2(s.dir.x, s.dir.y) - s.heading));
       const step = s.speed * dt * facingDot;
@@ -65,9 +71,13 @@ export function createController(collision, cabin) {
         const res = collision.move(s.pos, s.dir.x * step, s.dir.y * step, RADIUS);
         if (res === 'stuck') s.speed *= 0.6;
       }
+      if (push.lengthSq() > 1e-4) {
+        collision.move(s.pos, push.x * dt, push.y * dt, RADIUS);
+        push.multiplyScalar(Math.exp(-dt * 7));
+      }
       // vertical: follow walkable floor, or fly a jump arc
       const floor = collision.floorAt(s.pos.x, s.pos.z).y;
-      if (s.grounded && input.jump && !s.jumpHeld) { s.vy = 4.3; s.grounded = false; }
+      if (s.grounded && input.jump && !s.jumpHeld && (input.moveScale ?? 1) > 0.5) { s.vy = 4.3; s.grounded = false; }
       s.jumpHeld = input.jump;
       if (!s.grounded) {
         s.vy -= 12.5 * dt; s.pos.y += s.vy * dt;

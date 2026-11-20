@@ -47,6 +47,7 @@ export async function buildWorld(scene, { reflection, renderer, progress = () =>
     ['./cabin/cabin.js', 'createCabin'],
     ['./props/props.js', 'createProps'],
     ['./fx/fx.js', 'createFx'],
+    ['./fairy/fairyCircles.js', 'createFairyCircles'],
   ];
   // ?only=cabin,props builds just those optional steps (faster iteration)
   const only = new URLSearchParams(location.search).get('only');
