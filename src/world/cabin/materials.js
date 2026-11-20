@@ -25,8 +25,15 @@ const lam = (opts, st = {}) => stylize(new THREE.MeshLambertMaterial(opts), { wr
 
 let cached = null;
 
+// Shared set (props). The cabin builds its own set with createMaterialSet() so it can clip
+// its materials for the cutaway without touching the props that share textures.
 export function getMaterials() {
   if (cached) return cached;
+  cached = createMaterialSet();
+  return cached;
+}
+
+export function createMaterialSet() {
   const W = PALETTE.wood;
   const glow = { uGlow: { value: 0.25 }, uGlowColor: { value: new THREE.Color(1.0, 0.6, 0.28) }, uSkyRefl: { value: new THREE.Color(0.55, 0.72, 0.9) } };
   const white = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1); white.needsUpdate = true;
@@ -81,12 +88,10 @@ export function getMaterials() {
   };
   for (const [k, v] of Object.entries(m)) v.name = `M_${k}`;
   m.glowUniforms = glow;
-  cached = m;
   return m;
 }
 
-export function applyGlow(preset) {
-  const m = getMaterials();
+export function applyGlow(preset, m = getMaterials()) {
   m.glowUniforms.uGlow.value = preset.windowGlow;
   m.lanternGlass.emissiveIntensity = 0.15 + 4.5 * preset.lanternGlow;
 }

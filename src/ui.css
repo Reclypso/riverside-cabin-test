@@ -31,3 +31,5 @@ canvas { display: block; }
 #panel button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: rgba(255, 210, 122, .14); }
 #panel .hint { font-size: 11px; color: var(--muted); }
 #fps { position: fixed; right: 12px; top: 10px; font: 12px/1 ui-monospace, monospace; color: rgba(255,255,255,.85); text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+#panel button.play { border-color: rgba(255, 210, 122, .55); }
+#panel .hint.hidden { display: none; }

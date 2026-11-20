@@ -73,7 +73,7 @@ export function createGrassMaterial(palette = PALETTE.grass) {
   const c = (h) => ({ value: new THREE.Color(h) });
   const m = new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide });
   stylize(m, {
-    wrap: 0.35, ramp: 0.25, hue: 1.2,
+    wrap: 0.35, ramp: 0.25, hue: 1.2, ao: 0.7,
     uniforms: { uRoot: c(P.base), uMidA: c(P.midA), uMidB: c(P.midB), uTipA: c(P.tipA), uTipB: c(P.tipB), uDry: c(P.dry) },
     vertexPars: VERT_PARS, worldVertex: WORLD,
     fragmentPars: FRAG_PARS, albedo: ALBEDO, postLight: POST,

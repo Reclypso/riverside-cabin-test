@@ -18,23 +18,32 @@ function frameAndSill(add, w, y0, y1, depth = 0.4) {
   add('plankDark', boardGeo(w + 0.36, 0.15, depth + 0.02, rng), mtx(0, y1 + 0.075, 0.01), tint());
 }
 
-export function buildDoor(builder) {
+// Door frame + threshold go into the static cabin builder; the leaf (planks, rails, Z-brace,
+// strap hinges, ring handle, inside latch) goes into `leaf`, built in hinge-local space
+// (origin on the hinge line at y = 0, leaf extending along +X, outside face toward +Z).
+export function buildDoor(builder, leaf) {
   const { x, w, y0, y1 } = DIM.door;
   const add = place(builder, mtx(x, 0, DIM.frontZ));
   frameAndSill(add, w, y0, y1);
   add('plankDark', boardGeo(w + 0.3, 0.05, 0.46, rng), mtx(0, y0 + 0.025, 0.03), tint(0.7, 0.85)); // threshold
-  const h = y1 - y0 - 0.02, n = 5, pw = w / n;
+  if (!leaf) return;
+  const L = (key, geo, m, c) => leaf.add(key, geo, m, c);
+  const lw = w - 0.03, h = y1 - y0 - 0.02, n = 5, pw = lw / n;
   for (let i = 0; i < n; i++) {
-    add('plank', boardGeo(h, pw - 0.008, 0.05, rng), mtx(-w / 2 + pw * (i + 0.5), y0 + 0.01 + h / 2, 0.02, 0, 0, Math.PI / 2), tint(0.72, 0.92));
+    L('plank', boardGeo(h, pw - 0.008, 0.05, rng), mtx(0.005 + pw * (i + 0.5), y0 + 0.01 + h / 2, 0, 0, 0, Math.PI / 2), tint(0.72, 0.92));
   }
   const rails = [y0 + 0.32, y0 + h - 0.32];
-  for (const ry of rails) add('plank', boardGeo(w - 0.1, 0.13, 0.045, rng), mtx(0, ry, 0.065), tint(0.65, 0.8));
-  const dx = w - 0.22, dy = rails[1] - rails[0];
-  add('plank', boardGeo(Math.hypot(dx, dy) - 0.05, 0.11, 0.04, rng), mtx(0, (rails[0] + rails[1]) / 2, 0.063, 0, 0, Math.atan2(dy, -dx) + Math.PI), tint(0.65, 0.8));
-  for (const ry of rails) add('iron', new THREE.BoxGeometry(0.5, 0.045, 0.012), mtx(-w / 2 + 0.27, ry, 0.093), 0x666666);
-  const ring = new THREE.TorusGeometry(0.055, 0.009, 6, 16);
-  add('iron', new THREE.CylinderGeometry(0.035, 0.035, 0.012, 10), mtx(w / 2 - 0.16, y0 + 1.0, 0.052, Math.PI / 2, 0, 0), 0x888888);
-  add('iron', ring, mtx(w / 2 - 0.16, y0 + 0.95, 0.065, 0.25, 0, 0), 0x999999);
+  for (const ry of rails) L('plank', boardGeo(lw - 0.1, 0.13, 0.045, rng), mtx(lw / 2, ry, 0.045), tint(0.65, 0.8));
+  const dx = lw - 0.22, dy = rails[1] - rails[0];
+  L('plank', boardGeo(Math.hypot(dx, dy) - 0.05, 0.11, 0.04, rng), mtx(lw / 2, (rails[0] + rails[1]) / 2, 0.043, 0, 0, Math.atan2(dy, -dx) + Math.PI), tint(0.65, 0.8));
+  for (const ry of rails) L('iron', new THREE.BoxGeometry(0.5, 0.045, 0.012), mtx(0.25, ry, 0.073), 0x666666);
+  for (const ry of rails) L('iron', new THREE.CylinderGeometry(0.018, 0.018, 0.12, 8), mtx(-0.005, ry, 0.0), 0x555555); // hinge pins
+  L('iron', new THREE.CylinderGeometry(0.035, 0.035, 0.012, 10), mtx(lw - 0.16, y0 + 1.0, 0.032, Math.PI / 2, 0, 0), 0x888888);
+  L('iron', new THREE.TorusGeometry(0.055, 0.009, 6, 16), mtx(lw - 0.16, y0 + 0.95, 0.045, 0.25, 0, 0), 0x999999);
+  // inside: wooden latch bar on a keeper + pull string
+  L('plankDark', boardGeo(0.42, 0.05, 0.035, rng), mtx(lw - 0.2, y0 + 1.02, -0.045), tint(0.75, 0.9));
+  L('plankDark', boardGeo(0.06, 0.1, 0.05, rng), mtx(lw - 0.36, y0 + 1.02, -0.05), tint(0.7, 0.85));
+  L('rope', new THREE.CylinderGeometry(0.006, 0.006, 0.3, 4), mtx(lw - 0.05, y0 + 0.88, -0.05), 0xc9b07a);
 }
 
 export function buildWindow(builder, { cx, cz, ry, w, y0, y1, shutters = true, box = false }) {
@@ -81,8 +90,8 @@ export function buildWindow(builder, { cx, cz, ry, w, y0, y1, shutters = true, b
   }
 }
 
-export function buildOpenings(builder) {
-  buildDoor(builder);
+export function buildOpenings(builder, doorLeaf) {
+  buildDoor(builder, doorLeaf);
   const F = DIM.winFront, S = DIM.winSide, B = DIM.winBack;
   buildWindow(builder, { cx: F.x, cz: DIM.frontZ, ry: 0, w: F.w, y0: F.y0, y1: F.y1, box: true });
   buildWindow(builder, { cx: -DIM.sideX, cz: S.z, ry: -Math.PI / 2, w: S.w, y0: S.y0, y1: S.y1 });

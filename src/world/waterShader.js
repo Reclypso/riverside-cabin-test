@@ -53,7 +53,11 @@ void main(){
   vec3 nA = mix(a0, a1, wgt), nB = mix(b0, b1, wgt);
   vec3 drift = sampleN(xz * 0.05 + vec2(uTime * 0.008, -uTime * 0.006));
   float rough = 0.22 + 0.55 * clamp(speed, 0.0, 1.0);
-  vec3 N = normalize(vec3((nA.x + nB.x * 0.6 + drift.x * 0.5) * rough, 1.0, (nA.z + nB.z * 0.6 + drift.z * 0.5) * rough));
+  // pixel footprint (m/px): fade bands the screen can't resolve instead of letting them alias
+  float fw = length(fwidth(xz));
+  float fineK = 1.0 - smoothstep(0.035, 0.22, fw);   // 0.29 m ripple band
+  float midK = 1.0 - smoothstep(0.12, 0.7, fw);      // 0.11 m-scale band of nA
+  vec3 N = normalize(vec3((nA.x * midK + nB.x * 0.6 * fineK + drift.x * 0.5) * rough, 1.0, (nA.z * midK + nB.z * 0.6 * fineK + drift.z * 0.5) * rough));
 
   vec3 V = normalize(cameraPosition - vWorld);
   float ndv = max(dot(N, V), 0.0);
@@ -80,7 +84,7 @@ void main(){
   vec3 Ng = normalize(vec3(nB.x * 1.6, 1.0, nB.z * 1.6));
   float g = pow(max(dot(Ng, H), 0.0), 2200.0);
   float tw = step(0.6, hash12(floor(xz * 7.0) + floor(uTime * 3.0)));
-  spec += g * 40.0 * tw;
+  spec += g * 40.0 * tw * fineK; // glints only where their ripples are resolved
   col += uSunColor * spec * cloudShadow(xz);
   alpha = max(alpha, clamp(spec, 0.0, 1.0));
 

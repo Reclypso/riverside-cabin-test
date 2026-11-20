@@ -28,8 +28,10 @@
       <button data-tod="day" aria-pressed="true">Day</button>
       <button data-tod="golden" aria-pressed="false">Golden hour</button>
       <button id="orbit" aria-pressed="false" title="Cinematic auto-orbit (O)">Auto-orbit</button>
+      <button id="play" class="play" aria-pressed="false" title="Play as the woodsman (C)">▶ Play as woodsman</button>
     </div>
-    <div class="hint">Drag to orbit · right-drag to pan · wheel to zoom · O orbit · T time · H hide</div>
+    <div class="hint" id="hint-view">Drag to orbit · right-drag to pan · wheel to zoom · O orbit · T time · H hide · WASD or C to play</div>
+    <div class="hint hidden" id="hint-play">WASD / arrows move · Shift run · Space jump · drag to look · wheel zoom · C back to viewer</div>
   </div>
   <div id="fps"></div>
   <script type="module" src="./src/main.js"></script>

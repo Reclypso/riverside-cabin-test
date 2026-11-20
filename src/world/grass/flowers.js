@@ -88,7 +88,7 @@ export async function createFlowers() {
   geo.setAttribute('aTint', new THREE.InstancedBufferAttribute(new Float32Array(tint), 3));
   geo.setAttribute('aCentre', new THREE.InstancedBufferAttribute(new Float32Array(centre), 3));
   const mat = stylize(new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide }), {
-    wrap: 0.5, ramp: 0.2, hue: 0.8,
+    wrap: 0.5, ramp: 0.2, hue: 0.8, ao: 0.5,
     vertexPars: 'attribute float aPart; attribute vec3 aTint; attribute vec3 aCentre; varying vec3 vFCol; varying float vPart;',
     worldVertex: /* glsl */ `
       vPart = aPart;

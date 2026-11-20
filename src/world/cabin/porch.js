@@ -26,7 +26,7 @@ function logBetween(builder, a, b, r) {
   addLog(builder, len, r, m);
 }
 
-export function buildPorch(builder) {
+export function buildPorch(builder, roofBuilder = builder) {
   const { w, d, porch } = DIM;
   const deckY = DIM.found + 0.03, z0 = d / 2 + 0.02, z1 = d / 2 + porch;
   const hx = w / 2 + 0.1;
@@ -48,9 +48,9 @@ export function buildPorch(builder) {
   const slopeLen = (roofZ1 - d / 2) / Math.cos(pp);
   const roofHalfX = w / 2 + 0.25;
   const frame = (x, s, n = 0, tilt = 0, yaw = 0) => mtx(x, y0 - s * Math.sin(pp) + n * Math.cos(pp), d / 2 + s * Math.cos(pp) + n * Math.sin(pp), pp + tilt, yaw, 0, 1, 1, 1, 'YXZ');
-  for (let s = 0.15; s < slopeLen; s += 0.3) builder.add('plankDark', boardGeo(roofHalfX * 2, 0.05, 0.29, rng), frame(0, s, -0.025), tint(0.75, 0.9));
-  layShingles(builder, frame, roofHalfX, slopeLen, rng, { e: 0.27 });
-  builder.add('plankDark', boardGeo(roofHalfX * 2 + 0.06, 0.16, 0.045, rng), frame(0, slopeLen + 0.02, -0.04, -pp), tint(0.75, 0.85));
+  for (let s = 0.15; s < slopeLen; s += 0.3) roofBuilder.add('plankDark', boardGeo(roofHalfX * 2, 0.05, 0.29, rng), frame(0, s, -0.025), tint(0.75, 0.9));
+  layShingles(roofBuilder, frame, roofHalfX, slopeLen, rng, { e: 0.27 });
+  roofBuilder.add('plankDark', boardGeo(roofHalfX * 2 + 0.06, 0.16, 0.045, rng), frame(0, slopeLen + 0.02, -0.04, -pp), tint(0.75, 0.85));
   const yRoof = (z) => y0 - (z - d / 2) * Math.tan(pp);
 
   // beam, posts, knee braces, rafters

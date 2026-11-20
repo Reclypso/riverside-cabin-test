@@ -59,6 +59,12 @@ function stripCustom(g) {
     for (let i = 0; i < c.count; i++) a.set([c.getX(i), c.getY(i), c.getZ(i)], i * 3);
     g.setAttribute('color', new THREE.BufferAttribute(a, 3));
   }
+  // glTF COLOR_0 must be in 0..1 (validator ACCESSOR_NON_CLAMPED); a few foliage tints run a touch
+  // over 1 for brightness, so clamp on export (copy, the live geometry is untouched)
+  if (g.attributes.color) {
+    const c = g.attributes.color, a = Float32Array.from(c.array, (v) => Math.min(1, Math.max(0, v)));
+    g.setAttribute('color', new THREE.BufferAttribute(a, c.itemSize, c.normalized));
+  }
   return g;
 }
 

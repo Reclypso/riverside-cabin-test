@@ -6,10 +6,11 @@ import { createWater } from './water.js';
 import { createSky } from './sky.js';
 import { createClouds } from './clouds.js';
 import { markReflective } from '../render/reflection.js';
+import { markAO } from '../render/ao.js';
 
 const optional = async (path) => { try { return await import(path); } catch (e) { console.warn('skip', path, e.message); return null; } };
 
-export async function buildWorld(scene, { reflection, progress = () => {} }) {
+export async function buildWorld(scene, { reflection, renderer, progress = () => {} }) {
   const updaters = [];
   const presetTargets = [];
   const root = new THREE.Group();
@@ -54,7 +55,7 @@ export async function buildWorld(scene, { reflection, progress = () => {} }) {
     const mod = await optional(path);
     if (!mod || !mod[fn]) continue;
     let obj = null;
-    try { obj = await mod[fn]({ scene, root }); } catch (e) { console.error('build failed', path, e.stack || e.message); }
+    try { obj = await mod[fn]({ scene, root, renderer }); } catch (e) { console.error('build failed', path, e.stack || e.message); }
     if (!obj) continue;
     root.add(obj);
     if (obj.userData.reflect !== false) markReflective(obj);
@@ -62,5 +63,9 @@ export async function buildWorld(scene, { reflection, progress = () => {} }) {
     if (obj.setPreset) presetTargets.push(obj);
     progress(path);
   }
+  // solid geometry that feeds the AO depth pre-pass (no alpha-tested foliage, no water)
+  markAO(terrain);
+  for (const n of ['Cabin', 'Props', 'GroveDressing']) { const o = root.getObjectByName(n); if (o) markAO(o); }
+  root.getObjectByName('Trees')?.children.forEach((m) => { if (/_Bark$/.test(m.name) && !/_far_/.test(m.name)) markAO(m); });
   return { root, updaters, presetTargets, water, terrain };
 }

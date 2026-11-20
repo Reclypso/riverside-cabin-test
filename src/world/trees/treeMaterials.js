@@ -43,7 +43,7 @@ export function leafMaterial(map, color) {
     color, map, vertexColors: true, alphaTest: 0.42, side: THREE.DoubleSide,
   });
   stylize(m, {
-    wrap: 0.42, ramp: 0.2, hue: 1.3,
+    wrap: 0.42, ramp: 0.2, hue: 1.3, ao: 0,
     vertexPars: WIND_PARS + '\nvarying float vLeafOuter;',
     worldVertex: WIND(true) + '\nvLeafOuter = clamp(color.r * 1.2 - 0.25, 0.0, 1.0);',
     fragmentPars: 'varying float vLeafOuter;',

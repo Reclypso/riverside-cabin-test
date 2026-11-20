@@ -35,6 +35,9 @@ export function createCameraRig(renderer) {
   function setShot(shot) {
     camera.position.set(...shot.pos);
     controls.target.set(...shot.target);
+    // close-up shots (character portrait, interior) sit inside the viewer's 7 m zoom limit:
+    // relax the limit to the shot's own distance so OrbitControls doesn't push the camera back
+    controls.minDistance = Math.min(7, camera.position.distanceTo(controls.target) * 0.98);
     camera.fov = shot.fov;
     camera.updateProjectionMatrix();
     controls.update();

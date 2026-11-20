@@ -23,6 +23,8 @@ export function setupUI({ capture = false } = {}) {
       handlers.orbit?.(on);
     };
     for (const b of document.querySelectorAll('[data-tod]')) b.onclick = () => handlers.tod?.(b.dataset.tod);
+    const playBtn = $('play');
+    if (playBtn) playBtn.onclick = () => { playBtn.blur(); handlers.play?.(); };
     addEventListener('keydown', (e) => {
       if (e.key === 'o' || e.key === 'O') orbitBtn.click();
       if (e.key === 'h' || e.key === 'H') panel.classList.toggle('hidden');
@@ -37,6 +39,12 @@ export function setupUI({ capture = false } = {}) {
     done() {
       if (capture) { loader?.remove(); return; } // never let the fade leak into captures
       loader?.classList.add('gone'); setTimeout(() => loader?.remove(), 800);
+    },
+    setPlaying(on) {
+      $('play')?.setAttribute('aria-pressed', String(on));
+      if ($('play')) $('play').textContent = on ? '■ Back to viewer' : '▶ Play as woodsman';
+      $('hint-view')?.classList.toggle('hidden', on);
+      $('hint-play')?.classList.toggle('hidden', !on);
     },
     setTod(name) { for (const b of document.querySelectorAll('[data-tod]')) b.setAttribute('aria-pressed', String(b.dataset.tod === name)); },
     tick(dt) {

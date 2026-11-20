@@ -14,7 +14,7 @@ export function stoneTint(rng) {
 }
 
 // Lay courses of stones along one face. face: origin (x,z), dir (unit along face), normal.
-function layFace(builder, rng, { ox, oz, dx, dz, nx, nz, len, y0, y1 }) {
+export function layFace(builder, rng, { ox, oz, dx, dz, nx, nz, len, y0, y1, key = 'stone', tint = stoneTint }) {
   let y = y0;
   let row = 0;
   while (y < y1 - 0.05) {
@@ -28,7 +28,7 @@ function layFace(builder, rng, { ox, oz, dx, dz, nx, nz, len, y0, y1 }) {
       const out = rng.range(-0.01, 0.05);
       const px = ox + dx * c + nx * (out - depth / 2 + 0.06), pz = oz + dz * c + nz * (out - depth / 2 + 0.06);
       const yaw = Math.atan2(-dz, dx);
-      builder.add('stone', STONE, mtx(px, y + h / 2 + rng.range(-0.02, 0.02), pz, rng.range(-0.06, 0.06), yaw + rng.range(-0.07, 0.07), rng.range(-0.09, 0.09), L * 1.06, hh * 1.12, depth), stoneTint(rng));
+      builder.add(key, STONE, mtx(px, y + h / 2 + rng.range(-0.02, 0.02), pz, rng.range(-0.06, 0.06), yaw + rng.range(-0.07, 0.07), rng.range(-0.09, 0.09), L * 1.06, hh * 1.12, depth), tint(rng));
       t += L + 0.01;
     }
     y += h + 0.008;
@@ -36,7 +36,7 @@ function layFace(builder, rng, { ox, oz, dx, dz, nx, nz, len, y0, y1 }) {
   }
 }
 
-function box(builder, rng, x0, x1, y0, y1, z0, z1, faces) {
+export function box(builder, rng, x0, x1, y0, y1, z0, z1, faces, opts = {}) {
   // mortar core
   builder.add('mortar', new THREE.BoxGeometry(x1 - x0 - 0.06, y1 - y0, z1 - z0 - 0.06), mtx((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2));
   const F = {
@@ -45,7 +45,7 @@ function box(builder, rng, x0, x1, y0, y1, z0, z1, faces) {
     pz: { ox: x0, oz: z1, dx: 1, dz: 0, nx: 0, nz: 1, len: x1 - x0 },
     nz: { ox: x1, oz: z0, dx: -1, dz: 0, nx: 0, nz: -1, len: x1 - x0 },
   };
-  for (const f of faces) layFace(builder, rng, { ...F[f], y0, y1 });
+  for (const f of faces) layFace(builder, rng, { ...F[f], y0, y1, ...opts });
 }
 
 export function buildChimney(builder) {

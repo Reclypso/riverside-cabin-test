@@ -13,7 +13,34 @@ const WRAP_DIRECT = /* glsl */ `
 `;
 
 // painterly hue shift: sunlit areas warm, sky-lit (shadowed) areas cool
+const AO_APPLY = /* glsl */ `
+#if STY_AO > 0
+if (uAOParams.z > 0.0) {
+  vec2 suv = gl_FragCoord.xy * uAOParams.xy;
+  float ao = texture2D(uAOTex, suv).r;
+  // only where this fragment is the surface the AO pre-pass saw (no halos on foliage in front)
+  float dn = texture2D(uAODepth, suv).r * 2.0 - 1.0;
+  float zAO = 2.0 * uAOProj.x * uAOProj.y / (uAOProj.y + uAOProj.x - dn * (uAOProj.y - uAOProj.x));
+  float zF = vViewPosition.z;
+  float match = 1.0 - smoothstep(0.05, 0.14, abs(zAO - zF) / max(zF, 0.01));
+  ao = mix(1.0, ao, uAOParams.z * match * float(STY_AO) * 0.01);
+  vec3 lostAO = reflectedLight.indirectDiffuse * (1.0 - ao);
+  reflectedLight.indirectDiffuse -= lostAO;
+  outgoingLight -= lostAO;
+}
+#endif
+`;
+
 const HUE_SHIFT = /* glsl */ `
+{
+  // inside the cabin: the sky fill is mostly blocked by walls and roof
+  float inK = interiorK(vStyWorld);
+  if (inK > 0.0) {
+    vec3 lost = reflectedLight.indirectDiffuse * (1.0 - uInteriorAmbient) * inK;
+    reflectedLight.indirectDiffuse -= lost;
+    outgoingLight -= lost;
+  }
+}
 {
   float dL = dot(reflectedLight.directDiffuse, vec3(0.333));
   float aL = dot(reflectedLight.indirectDiffuse, vec3(0.333));
@@ -23,13 +50,13 @@ const HUE_SHIFT = /* glsl */ `
 
 export function stylize(material, opts = {}) {
   const {
-    wrap = 0.3, ramp = 0.4, hue = 1.0,
+    wrap = 0.3, ramp = 0.4, hue = 1.0, ao = 1.0,
     uniforms = {}, defines = {},
     vertexPars = '', worldVertex = '', localVertex = '',
     fragmentPars = '', albedo = '', postLight = '', normalHook = '',
   } = opts;
-  material.defines = { ...(material.defines || {}), STY_WRAP: wrap.toFixed(3), STY_RAMP: ramp.toFixed(3), STY_HUE: hue.toFixed(3), ...defines };
-  const key = [wrap, ramp, hue, vertexPars, worldVertex, localVertex, fragmentPars, albedo, postLight, normalHook].join('|');
+  material.defines = { ...(material.defines || {}), STY_WRAP: wrap.toFixed(3), STY_RAMP: ramp.toFixed(3), STY_HUE: hue.toFixed(3), STY_AO: Math.round(ao * 100), ...defines };
+  const key = [wrap, ramp, hue, ao, vertexPars, worldVertex, localVertex, fragmentPars, albedo, postLight, normalHook].join('|');
   material.customProgramCacheKey = () => key;
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, G, uniforms);
@@ -54,6 +81,12 @@ export function stylize(material, opts = {}) {
     fs = `${GLSL_COMMON}\nvarying vec3 vStyWorld;\n` + fs.replace('void main() {', `${fragmentPars}\nvoid main() {`);
     fs = fs.replace('#include <color_fragment>', `#include <color_fragment>\n${albedo}`);
     fs = fs.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\n${normalHook}`);
+    // interior lights (fire, oil lamp) only light fragments inside the cabin volume: no leaks
+    fs = fs.replace('#include <lights_fragment_begin>', THREE.ShaderChunk.lights_fragment_begin.replace(
+      'getPointLightInfo( pointLight, geometryPosition, directLight );',
+      `getPointLightInfo( pointLight, geometryPosition, directLight );
+      { vec3 lw = (pointLight.position - viewMatrix[3].xyz) * mat3(viewMatrix);
+        directLight.color *= mix(1.0, interiorK(vStyWorld), step(0.5, interiorK(lw))); }`));
     fs = fs.replace('#include <lights_lambert_pars_fragment>', THREE.ShaderChunk.lights_lambert_pars_fragment.replace(
       /float dotNL = saturate\( dot\( geometryNormal, directLight\.direction \) \);\s*vec3 irradiance = dotNL \* directLight\.color;/, WRAP_DIRECT));
     fs = fs.replace('#include <opaque_fragment>', `${postLight}\n#include <opaque_fragment>`);

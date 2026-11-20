@@ -10,6 +10,8 @@ import { paintLeafClump, paintFirSpray } from './leafTextures.js';
 import { barkTexture } from './barkTextures.js';
 import { leafMaterial, barkMaterial } from './treeMaterials.js';
 import { planTrees } from './placement.js';
+import { createImpostorAtlas, createImpostorField } from './impostors.js';
+import { planFarForest } from './farForest.js';
 import { groundY } from '../heightfield.js';
 import { makeRng } from '../../util/rng.js';
 
@@ -34,7 +36,7 @@ function leafTexture(P, v) {
   return t;
 }
 
-export async function createForest() {
+export async function createForest({ renderer } = {}) {
   const group = new THREE.Group();
   group.name = 'Trees';
   group.userData.export = 'trees';
@@ -42,6 +44,7 @@ export async function createForest() {
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), p = new THREE.Vector3();
   const UP = new THREE.Vector3(0, 1, 0);
   const stats = { trees: plan.length, draws: 0, leafVerts: 0 };
+  const atlasVariants = [];
 
   for (const [name, P] of Object.entries(SPECIES)) {
     const tex = leafTexture(P, 0);
@@ -50,9 +53,9 @@ export async function createForest() {
     const barkMat = barkMaterial(barkTexture(P.bark), new THREE.Color(P.barkColor), { moss: !!P.moss });
     for (let v = 0; v < VARIANTS; v++) {
       const spots = plan.filter((t) => t.species === name && (t.v ?? 0) % VARIANTS === v);
-      if (!spots.length) continue;
       const vb = buildVariant(name, P, v);
-      for (const lod of [false, true]) {
+      atlasVariants.push({ trunk: vb.trunk, leaves: vb.leaves, barkMat, leafMat, species: name, tint: P.tints[v % P.tints.length] });
+      for (const lod of spots.length ? [false, true] : []) {
         const list = spots.filter((t) => !!t.far === lod);
         if (!list.length) continue;
         let leafGeo = vb.leaves;
@@ -84,6 +87,18 @@ export async function createForest() {
       }
     }
   }
+  // far forest (beyond the real trees): impostor billboards baked from these variants
+  if (renderer) {
+    const atlas = createImpostorAtlas(renderer, atlasVariants);
+    const far = planFarForest(atlasVariants.map((a) => a.species));
+    group.add(createImpostorField(atlas, far));
+    group.setPreset = (p) => atlas.bake(p);
+    stats.impostors = far.length;
+  }
   console.log('forest', JSON.stringify(stats));
+  // trunk circles for character collision (play area only)
+  const TRUNK_R = { oak: 0.42, maple: 0.32, birch: 0.3, pine: 0.36 };
+  group.userData.trunks = plan.filter((t) => Math.abs(t.x) < 90 && Math.abs(t.z) < 90)
+    .map((t) => ({ x: t.x, z: t.z, r: (TRUNK_R[t.species] || 0.35) * t.s }));
   return group;
 }
